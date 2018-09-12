@@ -7,8 +7,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
+import pandas as pd
 
 POSTCODE = 'E15 1BL'
+POSTCODE = 'E15 4BZ'
+FILENAME = 'codes.csv'
 
 def get_elements_by_selector(selector, timeout = 10):
     condition = EC.visibility_of_any_elements_located((By.CSS_SELECTOR, selector))
@@ -56,7 +59,8 @@ def domino_go_to_basket(selector = '.nav-item-wide > a', url = 'https://www.domi
 
 def domino_enter_voucher_code(code, selector = '#voucher-code'):
     element = get_element_by_selector(selector)
-    element.send_keys(code)
+    decoded = code.decode("utf-8")
+    element.send_keys(decoded)
     element = get_element_by_selector('.new-voucher-button-box > button')
     element.click()
     time.sleep(1)
@@ -105,16 +109,28 @@ domino_go_to_basket()
 
 # domino_add_basket_item()
 
-codes = [
-    # u'FORTY40£',
-    u'FORTY40£',
-    u'FORTY40',
-    u'FORTY40£',
-]
+df = pd.read_csv(FILENAME)
 
-for code in codes:
-    domino_enter_voucher_code(code)
-    outcome = domino_verify_voucher_code()
-    print(code, outcome)
+# codes = [
+#     # u'FORTY40£',
+#     u'FORTY40£',
+#     u'FORTY40',
+#     u'FORTY40£',
+# ]
+#
+# for code in codes:
+#     domino_enter_voucher_code(code)
+#     outcome = domino_verify_voucher_code()
+#     print(code, outcome)
 
-# driver.close()
+try:
+    for i, row in df.iterrows():
+        if row.tested: continue
+        domino_enter_voucher_code(row.code)
+        outcome = domino_verify_voucher_code()
+        print(row.code, outcome)
+        df.set_value(i, 'tested', True)
+        df.set_value(i, 'valid', outcome)
+finally:
+    df.to_csv(FILENAME, index=False)
+    driver.close()
